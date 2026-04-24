@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vibe Todo</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="hero-card">
+        <p class="eyebrow">Simple Focus Board</p>
+        <h1>To-do 清单</h1>
+        <p class="hero-copy">
+          用一个清爽的列表整理当天任务，随时记录、完成和清理待办事项，让每天的安排保持清晰有序。
+        </p>
+
+        <div class="composer">
+          <label class="composer-label" for="todo-input">添加一条新任务</label>
+          <div class="composer-stack">
+            <input
+              id="todo-input"
+              class="todo-input"
+              type="text"
+              maxlength="120"
+              placeholder="例如：整理下周需求评审要点"
+            />
+            <div class="composer-row">
+              <label class="date-field" for="due-date-input">
+                <span class="date-label">截止日期</span>
+                <input id="due-date-input" class="date-input" type="date" />
+              </label>
+              <button id="add-button" class="primary-button" type="button">新增</button>
+            </div>
+          </div>
+          <p id="form-message" class="form-message" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section class="board-card">
+        <div class="board-header">
+          <div>
+            <p class="section-label">Task Board</p>
+            <h2>今日清单</h2>
+          </div>
+
+          <div class="stats" aria-live="polite">
+            <div class="stat-chip">
+              <span class="stat-label">全部</span>
+              <strong id="total-count">0</strong>
+            </div>
+            <div class="stat-chip">
+              <span class="stat-label">进行中</span>
+              <strong id="active-count">0</strong>
+            </div>
+            <div class="stat-chip">
+              <span class="stat-label">已完成</span>
+              <strong id="completed-count">0</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="filters" role="tablist" aria-label="任务筛选">
+          <button class="filter-button is-active" data-filter="all" type="button">全部</button>
+          <button class="filter-button" data-filter="active" type="button">进行中</button>
+          <button class="filter-button" data-filter="completed" type="button">已完成</button>
+        </div>
+
+        <ul id="todo-list" class="todo-list" aria-live="polite"></ul>
+
+        <template id="todo-item-template">
+          <li class="todo-item">
+            <button class="toggle-button" type="button" aria-label="切换完成状态"></button>
+            <div class="todo-content">
+              <p class="todo-title"></p>
+              <p class="todo-meta"></p>
+              <p class="todo-deadline"></p>
+            </div>
+            <button class="delete-button" type="button">删除</button>
+          </li>
+        </template>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
