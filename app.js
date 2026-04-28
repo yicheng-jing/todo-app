@@ -1,9 +1,17 @@
-const STORAGE_KEY = "vibe-todo-items";
+const SUPABASE_URL = "https://vbyusryrxqszoqdcgqlg.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_KHTURQwQK2G-8Q0r4HMUfg_zbGILfnI";
+
+const supabaseClient = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY
+);
 
 const state = {
-  todos: loadTodos(),
+  todos: [],
   filter: "all",
   recentlyCompletedId: null,
+  user: null,
+  isLoading: true,
 };
 
 const elements = {
@@ -17,96 +25,170 @@ const elements = {
   activeCount: document.querySelector("#active-count"),
   completedCount: document.querySelector("#completed-count"),
   filterButtons: Array.from(document.querySelectorAll(".filter-button")),
+  signInButton: document.querySelector("#sign-in-button"),
+  signOutButton: document.querySelector("#sign-out-button"),
+  userStatus: document.querySelector("#user-status"),
 };
 
-function loadTodos() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
+function showMessage(message) {
+  elements.message.textContent = message;
+}
 
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    console.error("Failed to read todos from storage.", error);
-    return [];
+function mapTodoFromDatabase(row) {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    title: row.title,
+    completed: row.completed,
+    dueDate: row.due_date,
+    createdAt: row.created_at,
+  };
+}
+
+function moveUpdatedTodo(todos, id, updatedTodo, shouldMoveToBottom) {
+  const nextTodos = todos.filter((todo) => todo.id !== id);
+
+  if (shouldMoveToBottom) {
+    nextTodos.push(updatedTodo);
+  } else {
+    nextTodos.unshift(updatedTodo);
+  }
+
+  return nextTodos;
+}
+
+async function signInWithGoogle() {
+  const { error } = await supabaseClient.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: window.location.href,
+    },
+  });
+
+  if (error) {
+    showMessage("Google 登录启动失败，请稍后再试。");
+    console.error("Failed to sign in with Google.", error);
   }
 }
 
-function saveTodos() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.todos));
-    return true;
-  } catch (error) {
-    console.error("Failed to save todos to storage.", error);
-    elements.message.textContent = "保存失败了，请检查浏览器是否允许本地存储。";
-    return false;
-  }
-}
+async function signOut() {
+  const { error } = await supabaseClient.auth.signOut();
 
-function generateId() {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
+  if (error) {
+    showMessage("退出登录失败，请稍后再试。");
+    console.error("Failed to sign out.", error);
+    return;
   }
 
-  return `todo-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  state.user = null;
+  state.todos = [];
+  render();
 }
 
-function addTodo(title, dueDate) {
+async function fetchTodos() {
+  if (!state.user) {
+    state.todos = [];
+    state.isLoading = false;
+    render();
+    return;
+  }
+
+  state.isLoading = true;
+  render();
+
+  const { data, error } = await supabaseClient
+    .from("todos")
+    .select("id,user_id,title,completed,due_date,created_at")
+    .order("created_at", { ascending: false });
+
+  state.isLoading = false;
+
+  if (error) {
+    showMessage("读取云端任务失败，请检查 Supabase 配置。");
+    console.error("Failed to fetch todos.", error);
+    render();
+    return;
+  }
+
+  state.todos = data.map(mapTodoFromDatabase);
+  render();
+}
+
+async function addTodo(title, dueDate) {
+  if (!state.user) {
+    showMessage("请先用 Google 登录，再添加任务。");
+    return;
+  }
+
   const trimmedTitle = title.trim();
   if (!trimmedTitle) {
-    elements.message.textContent = "先写下一个具体任务，再点新增。";
+    showMessage("先写下一个具体任务，再点新增。");
     return;
   }
 
   if (!dueDate) {
-    elements.message.textContent = "请选择一个截止日期。";
+    showMessage("请选择一个截止日期。");
     return;
   }
 
-  const todo = {
-    id: generateId(),
-    title: trimmedTitle,
-    completed: false,
-    createdAt: new Date().toISOString(),
-    dueDate,
-  };
+  elements.addButton.disabled = true;
 
-  state.todos.unshift(todo);
-  saveTodos();
+  const { data, error } = await supabaseClient
+    .from("todos")
+    .insert({
+      title: trimmedTitle,
+      due_date: dueDate,
+      completed: false,
+      user_id: state.user.id,
+    })
+    .select("id,user_id,title,completed,due_date,created_at")
+    .single();
+
+  elements.addButton.disabled = false;
+
+  if (error) {
+    showMessage("新增任务失败，请稍后再试。");
+    console.error("Failed to add todo.", error);
+    return;
+  }
+
+  state.todos.unshift(mapTodoFromDatabase(data));
   render();
 
   elements.input.value = "";
   elements.dueDateInput.value = "";
   elements.input.focus();
-  elements.message.textContent = "已加入清单，并记录截止日期。";
+  showMessage("已保存到云端。");
 }
 
-function toggleTodo(id) {
+async function toggleTodo(id) {
+  if (!state.user) return;
+
   const targetTodo = state.todos.find((todo) => todo.id === id);
-  const willComplete = targetTodo ? !targetTodo.completed : false;
+  if (!targetTodo) return;
 
-  state.todos = state.todos.reduce(
-    (nextTodos, todo) => {
-      if (todo.id !== id) {
-        nextTodos.push(todo);
-        return nextTodos;
-      }
+  const willComplete = !targetTodo.completed;
 
-      const updatedTodo = { ...todo, completed: !todo.completed };
+  const { data, error } = await supabaseClient
+    .from("todos")
+    .update({ completed: willComplete })
+    .eq("id", id)
+    .select("id,user_id,title,completed,due_date,created_at")
+    .single();
 
-      if (willComplete) {
-        nextTodos.push(updatedTodo);
-      } else {
-        nextTodos.unshift(updatedTodo);
-      }
+  if (error) {
+    showMessage("更新任务失败，请稍后再试。");
+    console.error("Failed to update todo.", error);
+    return;
+  }
 
-      return nextTodos;
-    },
-    []
+  state.todos = moveUpdatedTodo(
+    state.todos,
+    id,
+    mapTodoFromDatabase(data),
+    willComplete
   );
-
   state.recentlyCompletedId = willComplete ? id : null;
-  saveTodos();
   render();
 
   if (willComplete) {
@@ -119,9 +201,18 @@ function toggleTodo(id) {
   }
 }
 
-function deleteTodo(id) {
+async function deleteTodo(id) {
+  if (!state.user) return;
+
+  const { error } = await supabaseClient.from("todos").delete().eq("id", id);
+
+  if (error) {
+    showMessage("删除任务失败，请稍后再试。");
+    console.error("Failed to delete todo.", error);
+    return;
+  }
+
   state.todos = state.todos.filter((todo) => todo.id !== id);
-  saveTodos();
   render();
 }
 
@@ -180,6 +271,19 @@ function isOverdue(todo) {
   return dueDate < currentDate;
 }
 
+function renderAuth() {
+  const isSignedIn = Boolean(state.user);
+
+  elements.userStatus.textContent = isSignedIn
+    ? `已登录：${state.user.email}`
+    : "登录后可跨设备同步任务。";
+  elements.signInButton.hidden = isSignedIn;
+  elements.signOutButton.hidden = !isSignedIn;
+  elements.input.disabled = !isSignedIn;
+  elements.dueDateInput.disabled = !isSignedIn;
+  elements.addButton.disabled = !isSignedIn || state.isLoading;
+}
+
 function renderStats() {
   const total = state.todos.length;
   const completed = state.todos.filter((todo) => todo.completed).length;
@@ -200,6 +304,23 @@ function renderFilters() {
 
 function renderList() {
   elements.list.innerHTML = "";
+
+  if (state.isLoading) {
+    const loadingState = document.createElement("li");
+    loadingState.className = "empty-state";
+    loadingState.textContent = "正在同步云端任务...";
+    elements.list.appendChild(loadingState);
+    return;
+  }
+
+  if (!state.user) {
+    const signedOutState = document.createElement("li");
+    signedOutState.className = "empty-state";
+    signedOutState.textContent = "请先登录，查看你的云端 To-do 清单。";
+    elements.list.appendChild(signedOutState);
+    return;
+  }
+
   const visibleTodos = getVisibleTodos();
 
   if (visibleTodos.length === 0) {
@@ -242,11 +363,39 @@ function renderList() {
 }
 
 function render() {
+  renderAuth();
   renderStats();
   renderFilters();
   renderList();
 }
 
+async function initializeApp() {
+  const {
+    data: { session },
+    error,
+  } = await supabaseClient.auth.getSession();
+
+  if (error) {
+    showMessage("读取登录状态失败，请刷新页面再试。");
+    console.error("Failed to read auth session.", error);
+  }
+
+  state.user = session?.user ?? null;
+  state.isLoading = false;
+  render();
+
+  if (state.user) {
+    await fetchTodos();
+  }
+
+  supabaseClient.auth.onAuthStateChange((_event, session) => {
+    state.user = session?.user ?? null;
+    fetchTodos();
+  });
+}
+
+elements.signInButton.addEventListener("click", signInWithGoogle);
+elements.signOutButton.addEventListener("click", signOut);
 elements.addButton.addEventListener("click", () =>
   addTodo(elements.input.value, elements.dueDateInput.value)
 );
@@ -273,3 +422,4 @@ elements.filterButtons.forEach((button) => {
 });
 
 render();
+initializeApp();

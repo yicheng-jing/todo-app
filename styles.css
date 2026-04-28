@@ -91,6 +91,42 @@ h2 {
   line-height: 1.75;
 }
 
+.auth-panel {
+  margin-top: 28px;
+  padding: 18px;
+  border: 1px solid rgba(31, 122, 90, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.58);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.auth-label,
+.user-status {
+  margin: 0;
+}
+
+.auth-label {
+  color: var(--accent-strong);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.user-status {
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 0.94rem;
+}
+
+.auth-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .composer {
   margin-top: 40px;
   padding: 24px;
@@ -162,6 +198,7 @@ h2 {
 }
 
 .primary-button,
+.secondary-button,
 .filter-button,
 .delete-button,
 .toggle-button {
@@ -175,6 +212,7 @@ h2 {
 }
 
 .primary-button:hover,
+.secondary-button:hover,
 .filter-button:hover,
 .delete-button:hover,
 .toggle-button:hover {
@@ -188,6 +226,21 @@ h2 {
   color: #fff;
   font-weight: 700;
   box-shadow: 0 14px 28px rgba(13, 95, 69, 0.16);
+}
+
+.secondary-button {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 14px;
+  background: var(--text-strong);
+  color: #fff;
+  font-weight: 700;
+}
+
+button:disabled,
+input:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
 }
 
 .form-message {
@@ -389,12 +442,23 @@ h2 {
     padding: 18px;
   }
 
+  .auth-panel {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .auth-actions {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
   .composer-row,
   .todo-item {
     grid-template-columns: 1fr;
   }
 
   .primary-button,
+  .secondary-button,
   .delete-button,
   .date-input {
     min-height: 48px;

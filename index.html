@@ -15,6 +15,17 @@
           用一个清爽的列表整理当天任务，随时记录、完成和清理待办事项，让每天的安排保持清晰有序。
         </p>
 
+        <div class="auth-panel">
+          <div>
+            <p class="auth-label">账号同步</p>
+            <p id="user-status" class="user-status">正在检查登录状态...</p>
+          </div>
+          <div class="auth-actions">
+            <button id="sign-in-button" class="secondary-button" type="button">Google 登录</button>
+            <button id="sign-out-button" class="secondary-button" type="button" hidden>退出</button>
+          </div>
+        </div>
+
         <div class="composer">
           <label class="composer-label" for="todo-input">添加一条新任务</label>
           <div class="composer-stack">
@@ -82,6 +93,7 @@
       </section>
     </main>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./app.js"></script>
   </body>
 </html>

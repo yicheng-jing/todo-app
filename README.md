@@ -4,7 +4,17 @@
 
 ## 怎么打开
 
-直接用浏览器打开 [index.html](/Users/yichengjing/Documents/Codex/2026-04-24/codex/index.html) 就可以运行。
+因为项目已经接入 Google 登录，建议用本地服务打开，而不是直接打开文件：
+
+```bash
+python3 -m http.server 8000
+```
+
+然后访问：
+
+```text
+http://localhost:8000
+```
 
 ## 当前功能
 
@@ -12,8 +22,17 @@
 - 标记完成
 - 删除待办
 - 按“全部 / 进行中 / 已完成”筛选
-- 刷新后保留数据
+- Google 登录
+- 云端保存任务
+- 换设备登录后同步数据
 - 手机宽度下可用
+
+## Supabase 配置
+
+这个项目使用 Supabase Auth 和 `todos` 表保存数据。Google 登录需要在 Supabase 的 URL Configuration 中允许你的本地和线上地址，例如：
+
+- `http://localhost:8000`
+- Vercel 部署后的正式域名
 
 ## 你可以怎么继续练
 
@@ -31,7 +50,7 @@
 - `toggleTodo(id)`：切换完成状态
 - `deleteTodo(id)`：删除任务
 - `filterTodos(status)`：切换当前筛选
-- `localStorage`：把任务保存在浏览器里，刷新后还能看到
+- Supabase：把任务保存到云端，登录后跨设备同步
 
 ## 建议你的下一步
 
