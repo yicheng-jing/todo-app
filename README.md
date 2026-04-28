@@ -4,7 +4,13 @@
 
 ## 怎么打开
 
-因为项目已经接入 Google 登录，建议用本地服务打开，而不是直接打开文件：
+线上版本已经部署到 Vercel，可以直接访问：
+
+```text
+https://todo-app-five-sepia-46.vercel.app
+```
+
+如果要在本地开发或调试，建议用本地服务打开，而不是直接打开文件：
 
 ```bash
 python3 -m http.server 8000
